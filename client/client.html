@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Chat Example</title>
+<title>WS Client test</title>
 <script type="text/javascript">
 window.onload = function () {
     var conn;
@@ -18,18 +18,22 @@ window.onload = function () {
 
     document.getElementById("form").onsubmit = function () {
         if (!conn) {
+            console.log("conn")
             return false;
         }
         if (!msg.value) {
+            console.log("msg.value")
             return false;
         }
+        console.log(msg.value)
         conn.send(msg.value);
         msg.value = "";
         return false;
     };
 
     if (window["WebSocket"]) {
-        conn = new WebSocket("ws://" + document.location.host + "/ws");
+        console.log("connecting")
+        conn = new WebSocket("wss://localhost:8080/ws?token=asdkljasd-asd-asd-ajsjldkajsd-");
         conn.onclose = function (evt) {
             var item = document.createElement("div");
             item.innerHTML = "<b>Connection closed.</b>";

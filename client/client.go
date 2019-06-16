@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -20,12 +22,25 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	u := url.URL{Scheme: "ws", Host: *addr, Path: "/ws"}
+	u := url.URL{Scheme: "wss", Host: *addr, Path: "/ws"}
 	log.Printf("connecting to %s", u.String())
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	// TODO: remove the InsecureSkipVerify when deploy in production
+	config := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	dialer := websocket.Dialer{
+		TLSClientConfig: config,
+	}
+
+	c, resp, err := dialer.Dial(u.String(), http.Header{"Authorization": []string{"test_api_key"}})
+
 	if err != nil {
-		log.Fatal("dial:", err)
+		if err == websocket.ErrBadHandshake {
+			log.Printf("handshake failed with status %d", resp.StatusCode)
+		}
+		log.Fatal(err)
 	}
 	defer c.Close()
 
@@ -43,7 +58,7 @@ func main() {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	for {
