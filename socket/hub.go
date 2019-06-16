@@ -1,5 +1,7 @@
 package socket
 
+import "log"
+
 // Hub maintains the set of active clients and broadcasts messages to the
 // clients.
 type Hub struct {
@@ -28,6 +30,7 @@ func NewHub() *Hub {
 
 // Run start a new thread to process hub actions
 func (h *Hub) Run() {
+	log.Printf("Hub running\n")
 	for {
 		select {
 		case client := <-h.register:
@@ -39,15 +42,18 @@ func (h *Hub) Run() {
 				client.Close()
 			}
 		case message := <-h.messages:
+			log.Println("hub messages")
 			if len(message.Recipients) <= len(h.clients) {
 				for _, id := range message.Recipients {
 					if client, ok := h.clients[id]; ok {
+						log.Println("to client inbox")
 						client.inbox <- message
 					}
 				}
 			} else {
 				for _, client := range h.clients {
 					if contains(message.Recipients, client.id) {
+						log.Println("to client inbox")
 						client.inbox <- message
 					}
 				}

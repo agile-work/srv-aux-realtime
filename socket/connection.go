@@ -1,6 +1,7 @@
 package socket
 
 import (
+	"encoding/json"
 	"log"
 	"time"
 
@@ -27,15 +28,24 @@ func (c *Connection) readPump() {
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
+	log.Printf("[%s]Connection readPump running\n", c.client.id)
 	for {
 		msg := Message{}
-		err := c.conn.ReadJSON(msg)
+		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
+		err = json.Unmarshal(message, &msg)
+		if err != nil {
+			log.Printf("error unmarshal message: %v", err)
+			break
+		}
+
+		log.Printf("[%s]readPump\n", c.client.id)
 		c.client.outbox <- &msg
 	}
 }
@@ -51,9 +61,11 @@ func (c *Connection) writePump() {
 		ticker.Stop()
 		c.conn.Close()
 	}()
+	log.Printf("[%s]Connection writePump running\n", c.client.id)
 	for {
 		select {
 		case message, ok := <-c.send:
+			log.Printf("[%s]writePump\n", c.client.id)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.

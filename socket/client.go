@@ -3,6 +3,7 @@ package socket
 import (
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -61,6 +62,7 @@ func NewClient(hub *Hub, id, scope string, conn *Connection) *Client {
 
 // Run start a new thread to process hub actions
 func (c *Client) Run() {
+	log.Printf("[%s]Client running\n", c.id)
 	for {
 		select {
 		case conn := <-c.register:
@@ -72,14 +74,16 @@ func (c *Client) Run() {
 				delete(c.connections, conn)
 				close(conn.send)
 			}
-		case message := <-c.outbox:
-			c.hub.messages <- message
-		case message := <-c.inbox:
+		case incomingMessage := <-c.outbox:
+			log.Println("client outbox")
+			c.hub.messages <- incomingMessage
+		case outcomingMessage := <-c.inbox:
 			for conn := range c.connections {
-				msgBytes, err := message.GetData()
+				msgBytes, err := outcomingMessage.GetData()
 				if err != nil {
 					log.Println("invalid message data")
 				} else {
+					log.Println("processing client inbox")
 					conn.send <- msgBytes
 				}
 			}
@@ -107,14 +111,14 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Connecting %s - scope: %s\n", id, scope)
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	// Allow collection of memory referenced by the caller by doing all work in
-	// new goroutines.
 	connection := &Connection{
 		conn: conn,
 		send: make(chan []byte, 256),
@@ -122,14 +126,15 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 	client := hub.GetClient(id)
 	if client == nil {
-		client := NewClient(hub, id, scope, connection)
+		client = NewClient(hub, id, scope, connection)
 		client.hub.register <- client
 	}
 
 	connection.client = client
-	client.register <- connection
+	connection.client.register <- connection
 }
 
 func parseToken(token string) (string, string, error) {
-	return token, "user", nil
+	tkn := strings.Split(token, ",")
+	return tkn[0], tkn[1], nil
 }
