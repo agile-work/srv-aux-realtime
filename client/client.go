@@ -16,7 +16,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var addr = flag.String("addr", "localhost:8080", "http service address")
+var addr = flag.String("addr", "localhost:8010", "http service address")
 var id = flag.String("id", "", "Client id")
 var scope = flag.String("scope", "user", "Client scope")
 var message = flag.String("msg", "", "Message")
@@ -28,7 +28,7 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	u := url.URL{Scheme: "wss", Host: *addr, Path: "/ws"}
+	u := url.URL{Scheme: "wss", Host: *addr, Path: "/realtime/ws"}
 	log.Printf("connecting to %s", u.String())
 
 	// TODO: remove the InsecureSkipVerify when deploy in production
