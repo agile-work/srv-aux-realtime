@@ -9,7 +9,8 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/agile-work/srv-aux-realtime/socket"
+	"github.com/agile-work/srv-aux-realtime/routes"
+	"github.com/agile-work/srv-shared/socket"
 	"github.com/go-chi/chi"
 )
 
@@ -25,12 +26,12 @@ func main() {
 
 	flag.Parse()
 
-	hub := socket.NewHub()
+	hub := socket.GetHub()
 	go hub.Run()
 
 	r := chi.NewRouter()
 	r.Route("/realtime", func(r chi.Router) {
-		r.Mount("/admin", socket.Routes())
+		r.Mount("/admin", routes.Endpoints(hub))
 		r.HandleFunc("/ws", func(rw http.ResponseWriter, r *http.Request) {
 			socket.ServeWs(hub, rw, r)
 		})

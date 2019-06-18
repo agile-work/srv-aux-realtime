@@ -11,7 +11,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/agile-work/srv-aux-realtime/socket"
+	"github.com/agile-work/srv-shared/socket"
 
 	"github.com/gorilla/websocket"
 )
