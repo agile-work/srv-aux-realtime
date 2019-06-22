@@ -47,7 +47,7 @@ func main() {
 
 	go func() {
 		fmt.Println("")
-		fmt.Println("Websocket server listening on ", *addr)
+		fmt.Println("Realtime server listening on ", *addr)
 		fmt.Println("")
 		if err := srv.ListenAndServeTLS(*cert, *key); err != nil {
 			fmt.Printf("listen: %s\n", err)
@@ -59,5 +59,5 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	srv.Shutdown(ctx)
 	defer cancel()
-	fmt.Println("Websocket server stopped!")
+	fmt.Println("Realtime server stopped!")
 }
