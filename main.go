@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/agile-work/srv-aux-realtime/routes"
+	"github.com/agile-work/srv-shared/constants"
+	"github.com/agile-work/srv-shared/service"
 	"github.com/agile-work/srv-shared/socket"
 	"github.com/go-chi/chi"
 )
@@ -26,23 +28,25 @@ func main() {
 	signal.Notify(stopChan, os.Interrupt)
 
 	flag.Parse()
-	fmt.Println("Starting Service Realtime...")
+	pid := os.Getpid()
+	aux := service.New("Realtime", constants.ServiceTypeAuxiliary, *host, *port, pid)
+
+	fmt.Printf("Starting Service %s...\n", aux.Name)
+	fmt.Printf("[Instance: %s | PID: %d]\n", aux.InstanceCode, aux.PID)
 
 	hub := socket.GetHub()
 	go hub.Run()
 
 	r := chi.NewRouter()
 	r.Route("/realtime", func(r chi.Router) {
-		r.Mount("/admin", routes.Endpoints(hub))
+		r.Mount("/admin", routes.Endpoints(hub, aux))
 		r.HandleFunc("/ws", func(rw http.ResponseWriter, r *http.Request) {
 			socket.ServeWs(hub, rw, r)
 		})
 	})
 
-	addr := fmt.Sprintf("%s:%d", *host, *port)
-
 	srv := &http.Server{
-		Addr:         addr,
+		Addr:         fmt.Sprintf("%s:%d", aux.Host, aux.Port),
 		Handler:      r,
 		ReadTimeout:  60 * time.Second,
 		WriteTimeout: 60 * time.Second,
@@ -50,7 +54,7 @@ func main() {
 	}
 
 	go func() {
-		fmt.Printf("Realtime pid:%d listening on %d\n", os.Getpid(), *port)
+		fmt.Printf("Realtime ready listening on %d\n", aux.Port)
 		if err := srv.ListenAndServeTLS(*cert, *key); err != nil {
 			fmt.Printf("listen: %s\n", err)
 		}
