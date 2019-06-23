@@ -15,9 +15,10 @@ import (
 )
 
 var (
-	addr = flag.String("port", ":8010", "TCP port to listen to")
 	cert = flag.String("cert", "cert.pem", "Path to certification")
 	key  = flag.String("key", "key.pem", "Path to certification key")
+	host = flag.String("host", "localhost", "Realtime host")
+	port = flag.Int("port", 8010, "Realtime port")
 )
 
 func main() {
@@ -25,6 +26,7 @@ func main() {
 	signal.Notify(stopChan, os.Interrupt)
 
 	flag.Parse()
+	fmt.Println("Starting Service Realtime...")
 
 	hub := socket.GetHub()
 	go hub.Run()
@@ -37,8 +39,10 @@ func main() {
 		})
 	})
 
+	addr := fmt.Sprintf("%s:%d", *host, *port)
+
 	srv := &http.Server{
-		Addr:         *addr,
+		Addr:         addr,
 		Handler:      r,
 		ReadTimeout:  60 * time.Second,
 		WriteTimeout: 60 * time.Second,
@@ -46,16 +50,14 @@ func main() {
 	}
 
 	go func() {
-		fmt.Println("")
-		fmt.Println("Realtime server listening on ", *addr)
-		fmt.Println("")
+		fmt.Printf("Realtime pid:%d listening on %d\n", os.Getpid(), *port)
 		if err := srv.ListenAndServeTLS(*cert, *key); err != nil {
 			fmt.Printf("listen: %s\n", err)
 		}
 	}()
 
 	<-stopChan
-	fmt.Println("\nShutting down websocket server...")
+	fmt.Println("\nShutting down realtime server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	srv.Shutdown(ctx)
 	defer cancel()
